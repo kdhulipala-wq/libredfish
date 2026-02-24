@@ -198,7 +198,7 @@ impl Redfish for Bmc {
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
         _selected_profile: BiosProfileType,
-    ) -> Result<(), RedfishError> {
+    ) -> Result<Option<String>, RedfishError> {
         self.set_host_privilege_level(Restricted).await?;
         // we have found that only newer BMC fws support this action.
         // Until we re-enable DPU BMC firmware updates in preingestion,
@@ -206,7 +206,8 @@ impl Redfish for Bmc {
         // BF3s that have a BMC that is too old.
         self.set_host_rshim(EnabledDisabled::Disabled).await?;
         self.set_internal_cpu_model(Embedded).await?;
-        self.boot_once(UefiHttp).await
+        self.boot_once(UefiHttp).await?;
+        Ok(None)
     }
 
     async fn machine_setup_status(

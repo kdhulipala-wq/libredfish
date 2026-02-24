@@ -207,12 +207,17 @@ pub trait Redfish: Send + Sync + 'static {
     /// bios_profiles: Map of vendor/model (with spaces replaced by underscores)/profile/type
     ///   to extra settings; expected to come from config rather than hardcoded.
     /// selected_profile: Profile to use (if present)
+    /// Configure BIOS settings on the machine.
+    ///
+    /// Returns an optional job ID (e.g. Dell iDRAC task ID) that can be polled
+    /// via [`get_job_state`] to confirm the BIOS configuration task has completed.
+    /// Vendors that don't use task-based BIOS configuration return `None`.
     async fn machine_setup(
         &self,
         boot_interface_mac: Option<&str>,
         bios_profiles: &BiosProfileVendor,
         selected_profile: BiosProfileType,
-    ) -> Result<(), RedfishError>;
+    ) -> Result<Option<String>, RedfishError>;
 
     /// Is everything that machine_setup does already done?
     async fn machine_setup_status(

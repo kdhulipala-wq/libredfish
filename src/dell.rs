@@ -239,7 +239,7 @@ impl Redfish for Bmc {
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
         selected_profile: BiosProfileType,
-    ) -> Result<(), RedfishError> {
+    ) -> Result<Option<String>, RedfishError> {
         self.delete_job_queue().await?;
 
         let apply_time = dell::SetSettingsApplyTime {
@@ -287,19 +287,22 @@ impl Redfish for Bmc {
         }
 
         let url = format!("Systems/{}/Bios/Settings/", self.s.system_id());
-        match self.s.client.patch(&url, set_machine_attrs).await? {
+        tracing::info!("<kcd-lbrdfsh> PATCHing BIOS settings at {url}");
+        let job_id = match self.s.client.patch(&url, set_machine_attrs).await? {
             (_, Some(headers)) => self.parse_job_id_from_response_headers(&url, headers).await,
             (_, None) => Err(RedfishError::NoHeader),
         }?;
+
+        tracing::info!("<kcd-lbrdfsh> Dell BIOS configuration job created: {job_id}");
 
         self.machine_setup_oem().await?;
         self.setup_bmc_remote_access().await?;
 
         if has_dpu {
-            Ok(())
+            tracing::info!("<kcd-lbrdfsh> machine_setup complete, returning job_id={job_id} to caller");
+            Ok(Some(job_id))
         } else {
-            // Usually a missing DPU is an error, but for zero-dpu it isn't
-            // Tell the caller and let them decide
+            tracing::info!("<kcd-lbrdfsh> machine_setup complete (zero-DPU case), returning NoDpu error");
             Err(RedfishError::NoDpu)
         }
     }
@@ -803,9 +806,11 @@ impl Redfish for Bmc {
 
     async fn get_job_state(&self, job_id: &str) -> Result<JobState, RedfishError> {
         let url = format!("Managers/iDRAC.Embedded.1/Oem/Dell/Jobs/{}", job_id);
+        tracing::info!("<kcd-lbrdfsh> polling job state for {job_id} at {url}");
         let (_status_code, body): (_, HashMap<String, serde_json::Value>) =
             self.s.client.get(&url).await?;
         let job_state_value = jsonmap::get_str(&body, "JobState", &url)?;
+        tracing::info!("<kcd-lbrdfsh> job {job_id} raw state: {job_state_value}");
 
         let job_state = match JobState::from_str(job_state_value) {
             JobState::Scheduled => {
@@ -841,6 +846,7 @@ impl Redfish for Bmc {
             state => state,
         };
 
+        tracing::info!("<kcd-lbrdfsh> job {job_id} resolved state: {job_state:?}");
         Ok(job_state)
     }
 

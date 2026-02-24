@@ -196,7 +196,7 @@ impl Redfish for Bmc {
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
         _selected_profile: BiosProfileType,
-    ) -> Result<(), RedfishError> {
+    ) -> Result<Option<String>, RedfishError> {
         self.setup_serial_console().await?;
 
         let bios_attrs = self.machine_setup_attrs().await?;
@@ -204,7 +204,8 @@ impl Redfish for Bmc {
         attrs.extend(bios_attrs);
         let body = HashMap::from([("Attributes", attrs)]);
         let url = format!("Systems/{}/Bios", self.s.system_id());
-        self.s.client.patch(&url, body).await.map(|_status_code| ())
+        self.s.client.patch(&url, body).await.map(|_status_code| ())?;
+        Ok(None)
     }
 
     async fn machine_setup_status(
