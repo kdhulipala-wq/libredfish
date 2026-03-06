@@ -74,6 +74,7 @@ impl Redfish for Bmc {
         password: &str,
         role_id: RoleId,
     ) -> Result<(), RedfishError> {
+        println!("<kcdPrint> create_user");
         // Find an unused ID
         // 'root' is typically ID 2 on an iDrac, and ID 1 might be special
         let mut account_id = 3;
@@ -103,14 +104,17 @@ impl Redfish for Bmc {
     }
 
     async fn delete_user(&self, username: &str) -> Result<(), RedfishError> {
+        println!("<kcdPrint> delete_user");
         self.s.delete_user(username).await
     }
 
     async fn change_username(&self, old_name: &str, new_name: &str) -> Result<(), RedfishError> {
+        println!("<kcdPrint> change_username");
         self.s.change_username(old_name, new_name).await
     }
 
     async fn change_password(&self, username: &str, new_pass: &str) -> Result<(), RedfishError> {
+        println!("<kcdPrint> change_password");
         self.s.change_password(username, new_pass).await
     }
 
@@ -119,22 +123,27 @@ impl Redfish for Bmc {
         account_id: &str,
         new_pass: &str,
     ) -> Result<(), RedfishError> {
+        println!("<kcdPrint> change_password_by_id");
         self.s.change_password_by_id(account_id, new_pass).await
     }
 
     async fn get_accounts(&self) -> Result<Vec<ManagerAccount>, RedfishError> {
+        println!("<kcdPrint> get_accounts");
         self.s.get_accounts().await
     }
 
     async fn get_power_state(&self) -> Result<PowerState, RedfishError> {
+        println!("<kcdPrint> get_power_state");
         self.s.get_power_state().await
     }
 
     async fn get_power_metrics(&self) -> Result<Power, RedfishError> {
+        println!("<kcdPrint> get_power_metrics");
         self.s.get_power_metrics().await
     }
 
     async fn power(&self, action: SystemPowerControl) -> Result<(), RedfishError> {
+        println!("<kcdPrint> power");
         if action == SystemPowerControl::ACPowercycle {
             let is_lockdown = self.is_lockdown().await?;
             let bios_attrs = self.s.bios_attributes().await?;
@@ -155,10 +164,12 @@ impl Redfish for Bmc {
     }
 
     fn ac_powercycle_supported_by_power(&self) -> bool {
+        println!("<kcdPrint> ac_powercycle_supported_by_power");
         true
     }
 
     async fn bmc_reset(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> bmc_reset");
         self.s.bmc_reset().await
     }
 
@@ -167,22 +178,27 @@ impl Redfish for Bmc {
         chassis_id: &str,
         reset_type: SystemPowerControl,
     ) -> Result<(), RedfishError> {
+        println!("<kcdPrint> chassis_reset");
         self.s.chassis_reset(chassis_id, reset_type).await
     }
 
     async fn get_thermal_metrics(&self) -> Result<Thermal, RedfishError> {
+        println!("<kcdPrint> get_thermal_metrics");
         self.s.get_thermal_metrics().await
     }
 
     async fn get_gpu_sensors(&self) -> Result<Vec<GPUSensors>, RedfishError> {
+        println!("<kcdPrint> get_gpu_sensors");
         self.s.get_gpu_sensors().await
     }
 
     async fn get_update_service(&self) -> Result<UpdateService, RedfishError> {
+        println!("<kcdPrint> get_update_service");
         self.s.get_update_service().await
     }
 
     async fn get_system_event_log(&self) -> Result<Vec<LogEntry>, RedfishError> {
+        println!("<kcdPrint> get_system_event_log");
         self.get_system_event_log().await
     }
 
@@ -190,15 +206,18 @@ impl Redfish for Bmc {
         &self,
         from: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<Vec<LogEntry>, RedfishError> {
+        println!("<kcdPrint> get_bmc_event_log");
         // Different Dell timestamp formats (UTC-5, DST, etc..) are making filtering and comparing very difficult
         self.s.get_bmc_event_log(from).await
     }
 
     async fn get_drives_metrics(&self) -> Result<Vec<Drives>, RedfishError> {
+        println!("<kcdPrint> get_drives_metrics");
         self.s.get_drives_metrics().await
     }
 
     async fn bios(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError> {
+        println!("<kcdPrint> bios");
         self.s.bios().await
     }
 
@@ -206,6 +225,7 @@ impl Redfish for Bmc {
         &self,
         values: HashMap<String, serde_json::Value>,
     ) -> Result<(), RedfishError> {
+        println!("<kcdPrint> set_bios");
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
         };
@@ -224,10 +244,12 @@ impl Redfish for Bmc {
     }
 
     async fn reset_bios(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> reset_bios");
         self.s.factory_reset_bios().await
     }
 
     async fn get_base_mac_address(&self) -> Result<Option<String>, RedfishError> {
+        println!("<kcdPrint> get_base_mac_address");
         self.s.get_base_mac_address().await
     }
 
@@ -240,6 +262,7 @@ impl Redfish for Bmc {
         >,
         selected_profile: BiosProfileType,
     ) -> Result<(), RedfishError> {
+        println!("<kcdPrint> machine_setup");
         self.delete_job_queue().await?;
 
         let apply_time = dell::SetSettingsApplyTime {
@@ -308,6 +331,7 @@ impl Redfish for Bmc {
         &self,
         boot_interface_mac: Option<&str>,
     ) -> Result<MachineSetupStatus, RedfishError> {
+        println!("<kcdPrint> machine_setup_status");
         // Check BIOS and BMC attributes
         let mut diffs = self.diff_bios_bmc_attr(boot_interface_mac).await?;
 
@@ -342,6 +366,7 @@ impl Redfish for Bmc {
     /// iDRAC does not suport changing password policy. They support IP blocking instead.
     /// https://github.com/dell/iDRAC-Redfish-Scripting/issues/295
     async fn set_machine_password_policy(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> set_machine_password_policy");
         // These are all password policy a Dell has, and they are all read only.
         // Redfish will reject attempts to modify them.
         // - AccountLockoutThreshold
@@ -352,6 +377,7 @@ impl Redfish for Bmc {
     }
 
     async fn lockdown(&self, target: EnabledDisabled) -> Result<(), RedfishError> {
+        println!("<kcdPrint> lockdown");
         use EnabledDisabled::*;
         // XE9680's can't PXE boot for some reason
         let system = self.s.get_system().await?;
@@ -373,6 +399,7 @@ impl Redfish for Bmc {
     }
 
     async fn lockdown_status(&self) -> Result<Status, RedfishError> {
+        println!("<kcdPrint> lockdown_status");
         let mut message = String::new();
         let enabled = EnabledDisabled::Enabled.to_string();
         let disabled = EnabledDisabled::Disabled.to_string();
@@ -402,6 +429,7 @@ impl Redfish for Bmc {
     }
 
     async fn setup_serial_console(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> setup_serial_console");
         self.delete_job_queue().await?;
 
         self.setup_bmc_remote_access().await?;
@@ -460,6 +488,7 @@ impl Redfish for Bmc {
     }
 
     async fn serial_console_status(&self) -> Result<Status, RedfishError> {
+        println!("<kcdPrint> serial_console_status");
         let Status {
             status: remote_access_status,
             message: remote_access_message,
@@ -484,14 +513,17 @@ impl Redfish for Bmc {
     }
 
     async fn get_boot_options(&self) -> Result<BootOptions, RedfishError> {
+        println!("<kcdPrint> get_boot_options");
         self.s.get_boot_options().await
     }
 
     async fn get_boot_option(&self, option_id: &str) -> Result<BootOption, RedfishError> {
+        println!("<kcdPrint> get_boot_option");
         self.s.get_boot_option(option_id).await
     }
 
     async fn boot_once(&self, target: Boot) -> Result<(), RedfishError> {
+        println!("<kcdPrint> boot_once");
         match target {
             Boot::Pxe => self.set_boot_first(dell::BootDevices::PXE, true).await,
             Boot::HardDisk => self.set_boot_first(dell::BootDevices::HDD, true).await,
@@ -502,6 +534,7 @@ impl Redfish for Bmc {
     }
 
     async fn boot_first(&self, target: Boot) -> Result<(), RedfishError> {
+        println!("<kcdPrint> boot_first");
         match target {
             Boot::Pxe => self.set_boot_first(dell::BootDevices::PXE, false).await,
             Boot::HardDisk => self.set_boot_first(dell::BootDevices::HDD, false).await,
@@ -512,6 +545,7 @@ impl Redfish for Bmc {
     }
 
     async fn clear_tpm(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> clear_tpm");
         self.delete_job_queue().await?;
 
         let apply_time = dell::SetSettingsApplyTime {
@@ -534,14 +568,17 @@ impl Redfish for Bmc {
     }
 
     async fn pending(&self) -> Result<HashMap<String, serde_json::Value>, RedfishError> {
+        println!("<kcdPrint> pending");
         self.s.pending().await
     }
 
     async fn clear_pending(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> clear_pending");
         self.delete_job_queue().await
     }
 
     async fn pcie_devices(&self) -> Result<Vec<PCIeDevice>, RedfishError> {
+        println!("<kcdPrint> pcie_devices");
         self.s.pcie_devices().await
     }
 
@@ -549,6 +586,7 @@ impl Redfish for Bmc {
         &self,
         firmware: tokio::fs::File,
     ) -> Result<crate::model::task::Task, RedfishError> {
+        println!("<kcdPrint> update_firmware");
         self.s.update_firmware(firmware).await
     }
 
@@ -560,6 +598,7 @@ impl Redfish for Bmc {
         timeout: Duration,
         _component_type: ComponentType,
     ) -> Result<String, RedfishError> {
+        println!("<kcdPrint> update_firmware_multipart");
         let firmware = File::open(&filename)
             .await
             .map_err(|e| RedfishError::FileError(format!("Could not open file: {e}")))?;
@@ -595,22 +634,27 @@ impl Redfish for Bmc {
     }
 
     async fn get_tasks(&self) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_tasks");
         self.s.get_tasks().await
     }
 
     async fn get_task(&self, id: &str) -> Result<crate::model::task::Task, RedfishError> {
+        println!("<kcdPrint> get_task");
         self.s.get_task(id).await
     }
 
     async fn get_firmware(&self, id: &str) -> Result<SoftwareInventory, RedfishError> {
+        println!("<kcdPrint> get_firmware");
         self.s.get_firmware(id).await
     }
 
     async fn get_software_inventories(&self) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_software_inventories");
         self.s.get_software_inventories().await
     }
 
     async fn get_system(&self) -> Result<ComputerSystem, RedfishError> {
+        println!("<kcdPrint> get_system");
         self.s.get_system().await
     }
 
@@ -619,6 +663,7 @@ impl Redfish for Bmc {
         database_id: &str,
         certificate_id: &str,
     ) -> Result<Certificate, RedfishError> {
+        println!("<kcdPrint> get_secure_boot_certificate");
         self.s
             .get_secure_boot_certificate(database_id, certificate_id)
             .await
@@ -628,6 +673,7 @@ impl Redfish for Bmc {
         &self,
         database_id: &str,
     ) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_secure_boot_certificates");
         self.s.get_secure_boot_certificates(database_id).await
     }
 
@@ -636,20 +682,24 @@ impl Redfish for Bmc {
         pem_cert: &str,
         database_id: &str,
     ) -> Result<Task, RedfishError> {
+        println!("<kcdPrint> add_secure_boot_certificate");
         self.s
             .add_secure_boot_certificate(pem_cert, database_id)
             .await
     }
 
     async fn get_secure_boot(&self) -> Result<SecureBoot, RedfishError> {
+        println!("<kcdPrint> get_secure_boot");
         self.s.get_secure_boot().await
     }
 
     async fn enable_secure_boot(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> enable_secure_boot");
         self.s.enable_secure_boot().await
     }
 
     async fn disable_secure_boot(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> disable_secure_boot");
         self.s.disable_secure_boot().await
     }
 
@@ -659,6 +709,7 @@ impl Redfish for Bmc {
         id: &str,
         port: Option<&str>,
     ) -> Result<NetworkDeviceFunction, RedfishError> {
+        println!("<kcdPrint> get_network_device_function");
         let Some(port) = port else {
             return Err(RedfishError::GenericError {
                 error: "Port is missing for Dell.".to_string(),
@@ -676,18 +727,22 @@ impl Redfish for Bmc {
         &self,
         chassis_id: &str,
     ) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_network_device_functions");
         self.s.get_network_device_functions(chassis_id).await
     }
 
     async fn get_chassis_all(&self) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_chassis_all");
         self.s.get_chassis_all().await
     }
 
     async fn get_chassis(&self, id: &str) -> Result<Chassis, RedfishError> {
+        println!("<kcdPrint> get_chassis");
         self.s.get_chassis(id).await
     }
 
     async fn get_chassis_assembly(&self, chassis_id: &str) -> Result<Assembly, RedfishError> {
+        println!("<kcdPrint> get_chassis_assembly");
         self.s.get_chassis_assembly(chassis_id).await
     }
 
@@ -695,6 +750,7 @@ impl Redfish for Bmc {
         &self,
         chassis_id: &str,
     ) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_chassis_network_adapters");
         self.s.get_chassis_network_adapters(chassis_id).await
     }
 
@@ -703,6 +759,7 @@ impl Redfish for Bmc {
         chassis_id: &str,
         id: &str,
     ) -> Result<NetworkAdapter, RedfishError> {
+        println!("<kcdPrint> get_chassis_network_adapter");
         self.s.get_chassis_network_adapter(chassis_id, id).await
     }
 
@@ -710,6 +767,7 @@ impl Redfish for Bmc {
         &self,
         system_id: &str,
     ) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_base_network_adapters");
         self.s.get_base_network_adapters(system_id).await
     }
 
@@ -718,6 +776,7 @@ impl Redfish for Bmc {
         system_id: &str,
         id: &str,
     ) -> Result<NetworkAdapter, RedfishError> {
+        println!("<kcdPrint> get_base_network_adapter");
         self.s.get_base_network_adapter(system_id, id).await
     }
 
@@ -726,6 +785,7 @@ impl Redfish for Bmc {
         chassis_id: &str,
         network_adapter: &str,
     ) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_ports");
         self.s.get_ports(chassis_id, network_adapter).await
     }
 
@@ -735,10 +795,12 @@ impl Redfish for Bmc {
         network_adapter: &str,
         id: &str,
     ) -> Result<crate::NetworkPort, RedfishError> {
+        println!("<kcdPrint> get_port");
         self.s.get_port(chassis_id, network_adapter, id).await
     }
 
     async fn get_manager_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_manager_ethernet_interfaces");
         self.s.get_manager_ethernet_interfaces().await
     }
 
@@ -746,10 +808,12 @@ impl Redfish for Bmc {
         &self,
         id: &str,
     ) -> Result<crate::EthernetInterface, RedfishError> {
+        println!("<kcdPrint> get_manager_ethernet_interface");
         self.s.get_manager_ethernet_interface(id).await
     }
 
     async fn get_system_ethernet_interfaces(&self) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_system_ethernet_interfaces");
         self.s.get_system_ethernet_interfaces().await
     }
 
@@ -757,6 +821,7 @@ impl Redfish for Bmc {
         &self,
         id: &str,
     ) -> Result<crate::EthernetInterface, RedfishError> {
+        println!("<kcdPrint> get_system_ethernet_interface");
         self.s.get_system_ethernet_interface(id).await
     }
 
@@ -765,6 +830,7 @@ impl Redfish for Bmc {
         current_uefi_password: &str,
         new_uefi_password: &str,
     ) -> Result<Option<String>, RedfishError> {
+        println!("<kcdPrint> change_uefi_password");
         // The uefi password cant be changed if the host is in lockdown
         if self.is_lockdown().await? {
             return Err(RedfishError::Lockdown);
@@ -781,30 +847,37 @@ impl Redfish for Bmc {
     }
 
     async fn change_boot_order(&self, boot_array: Vec<String>) -> Result<(), RedfishError> {
+        println!("<kcdPrint> change_boot_order");
         self.s.change_boot_order(boot_array).await
     }
 
     async fn get_service_root(&self) -> Result<ServiceRoot, RedfishError> {
+        println!("<kcdPrint> get_service_root");
         self.s.get_service_root().await
     }
 
     async fn get_systems(&self) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_systems");
         self.s.get_systems().await
     }
 
     async fn get_managers(&self) -> Result<Vec<String>, RedfishError> {
+        println!("<kcdPrint> get_managers");
         self.s.get_managers().await
     }
 
     async fn get_manager(&self) -> Result<Manager, RedfishError> {
+        println!("<kcdPrint> get_manager");
         self.s.get_manager().await
     }
 
     async fn bmc_reset_to_defaults(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> bmc_reset_to_defaults");
         self.s.bmc_reset_to_defaults().await
     }
 
     async fn get_job_state(&self, job_id: &str) -> Result<JobState, RedfishError> {
+        println!("<kcdPrint> get_job_state");
         let url = format!("Managers/iDRAC.Embedded.1/Oem/Dell/Jobs/{}", job_id);
         let (_status_code, body): (_, HashMap<String, serde_json::Value>) =
             self.s.client.get(&url).await?;
@@ -848,10 +921,12 @@ impl Redfish for Bmc {
     }
 
     async fn get_collection(&self, id: ODataId) -> Result<Collection, RedfishError> {
+        println!("<kcdPrint> get_collection");
         self.s.get_collection(id).await
     }
 
     async fn get_resource(&self, id: ODataId) -> Result<Resource, RedfishError> {
+        println!("<kcdPrint> get_resource");
         self.s.get_resource(id).await
     }
 
@@ -861,6 +936,7 @@ impl Redfish for Bmc {
         &self,
         boot_interface_mac: &str,
     ) -> Result<Option<String>, RedfishError> {
+        println!("<kcdPrint> set_boot_order_dpu_first");
         let expected_boot_option_name: String = self
             .get_expected_dpu_boot_option_name(boot_interface_mac)
             .await?;
@@ -898,6 +974,7 @@ impl Redfish for Bmc {
         &self,
         current_uefi_password: &str,
     ) -> Result<Option<String>, RedfishError> {
+        println!("<kcdPrint> clear_uefi_password");
         match self.change_uefi_password(current_uefi_password, "").await {
             Ok(job_id) => return Ok(job_id),
             Err(e) => {
@@ -916,6 +993,7 @@ impl Redfish for Bmc {
     }
 
     async fn lockdown_bmc(&self, target: crate::EnabledDisabled) -> Result<(), RedfishError> {
+        println!("<kcdPrint> lockdown_bmc");
         use EnabledDisabled::*;
 
         // XE9680's can't PXE boot for some reason
@@ -932,6 +1010,7 @@ impl Redfish for Bmc {
     }
 
     async fn is_ipmi_over_lan_enabled(&self) -> Result<bool, RedfishError> {
+        println!("<kcdPrint> is_ipmi_over_lan_enabled");
         self.s.is_ipmi_over_lan_enabled().await
     }
 
@@ -939,6 +1018,7 @@ impl Redfish for Bmc {
         &self,
         target: crate::EnabledDisabled,
     ) -> Result<(), RedfishError> {
+        println!("<kcdPrint> enable_ipmi_over_lan");
         self.s.enable_ipmi_over_lan(target).await
     }
 
@@ -948,34 +1028,41 @@ impl Redfish for Bmc {
         targets: Vec<String>,
         transfer_protocol: TransferProtocolType,
     ) -> Result<Task, RedfishError> {
+        println!("<kcdPrint> update_firmware_simple_update");
         self.s
             .update_firmware_simple_update(image_uri, targets, transfer_protocol)
             .await
     }
 
     async fn enable_rshim_bmc(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> enable_rshim_bmc");
         self.s.enable_rshim_bmc().await
     }
 
     async fn clear_nvram(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> clear_nvram");
         self.s.clear_nvram().await
     }
 
     async fn get_nic_mode(&self) -> Result<Option<NicMode>, RedfishError> {
+        println!("<kcdPrint> get_nic_mode");
         self.s.get_nic_mode().await
     }
 
     async fn set_nic_mode(&self, mode: NicMode) -> Result<(), RedfishError> {
+        println!("<kcdPrint> set_nic_mode");
         self.s.set_nic_mode(mode).await
     }
 
     async fn enable_infinite_boot(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> enable_infinite_boot");
         let attrs: HashMap<String, serde_json::Value> =
             HashMap::from([("BootSeqRetry".to_string(), "Enabled".into())]);
         self.set_bios(attrs).await
     }
 
     async fn is_infinite_boot_enabled(&self) -> Result<Option<bool>, RedfishError> {
+        println!("<kcdPrint> is_infinite_boot_enabled");
         let url = format!("Systems/{}/Bios", self.s.system_id());
         let bios = self.bios().await?;
         let bios_attributes = jsonmap::get_object(&bios, "Attributes", &url)?;
@@ -988,18 +1075,22 @@ impl Redfish for Bmc {
     }
 
     async fn set_host_rshim(&self, enabled: EnabledDisabled) -> Result<(), RedfishError> {
+        println!("<kcdPrint> set_host_rshim");
         self.s.set_host_rshim(enabled).await
     }
 
     async fn get_host_rshim(&self) -> Result<Option<EnabledDisabled>, RedfishError> {
+        println!("<kcdPrint> get_host_rshim");
         self.s.get_host_rshim().await
     }
 
     async fn set_idrac_lockdown(&self, enabled: EnabledDisabled) -> Result<(), RedfishError> {
+        println!("<kcdPrint> set_idrac_lockdown");
         self.set_idrac_lockdown(enabled).await
     }
 
     async fn get_boss_controller(&self) -> Result<Option<String>, RedfishError> {
+        println!("<kcdPrint> get_boss_controller");
         self.get_boss_controller().await
     }
 
@@ -1007,6 +1098,7 @@ impl Redfish for Bmc {
         &self,
         controller_id: &str,
     ) -> Result<Option<String>, RedfishError> {
+        println!("<kcdPrint> decommission_storage_controller");
         Ok(Some(self.decommission_controller(controller_id).await?))
     }
 
@@ -1015,6 +1107,7 @@ impl Redfish for Bmc {
         controller_id: &str,
         volume_name: &str,
     ) -> Result<Option<String>, RedfishError> {
+        println!("<kcdPrint> create_storage_volume");
         let drives = self.get_storage_drives(controller_id).await?;
 
         let raid_type = match drives.as_array().map(|a| a.len()).unwrap_or(0) {
@@ -1036,6 +1129,7 @@ impl Redfish for Bmc {
     }
 
     async fn is_boot_order_setup(&self, boot_interface_mac: &str) -> Result<bool, RedfishError> {
+        println!("<kcdPrint> is_boot_order_setup");
         let (expected, actual) = self
             .get_expected_and_actual_first_boot_option(boot_interface_mac)
             .await?;
@@ -1043,11 +1137,13 @@ impl Redfish for Bmc {
     }
 
     async fn is_bios_setup(&self, boot_interface_mac: Option<&str>) -> Result<bool, RedfishError> {
+        println!("<kcdPrint> is_bios_setup");
         let diffs = self.diff_bios_bmc_attr(boot_interface_mac).await?;
         Ok(diffs.is_empty())
     }
 
     async fn get_component_integrities(&self) -> Result<ComponentIntegrities, RedfishError> {
+        println!("<kcdPrint> get_component_integrities");
         self.s.get_component_integrities().await
     }
 
@@ -1055,6 +1151,7 @@ impl Redfish for Bmc {
         &self,
         componnent_integrity_id: &str,
     ) -> Result<crate::model::software_inventory::SoftwareInventory, RedfishError> {
+        println!("<kcdPrint> get_firmware_for_component");
         self.s
             .get_firmware_for_component(componnent_integrity_id)
             .await
@@ -1064,6 +1161,7 @@ impl Redfish for Bmc {
         &self,
         url: &str,
     ) -> Result<crate::model::component_integrity::CaCertificate, RedfishError> {
+        println!("<kcdPrint> get_component_ca_certificate");
         self.s.get_component_ca_certificate(url).await
     }
 
@@ -1072,6 +1170,7 @@ impl Redfish for Bmc {
         url: &str,
         nonce: &str,
     ) -> Result<Task, RedfishError> {
+        println!("<kcdPrint> trigger_evidence_collection");
         self.s.trigger_evidence_collection(url, nonce).await
     }
 
@@ -1079,6 +1178,7 @@ impl Redfish for Bmc {
         &self,
         url: &str,
     ) -> Result<crate::model::component_integrity::Evidence, RedfishError> {
+        println!("<kcdPrint> get_evidence");
         self.s.get_evidence(url).await
     }
 
@@ -1086,10 +1186,12 @@ impl Redfish for Bmc {
         &self,
         level: HostPrivilegeLevel,
     ) -> Result<(), RedfishError> {
+        println!("<kcdPrint> set_host_privilege_level");
         self.s.set_host_privilege_level(level).await
     }
 
     async fn set_utc_timezone(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> set_utc_timezone");
         let manager_id = self.s.manager_id();
         let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
 
@@ -1103,6 +1205,7 @@ impl Redfish for Bmc {
     }
 
     async fn disable_psu_hot_spare(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> disable_psu_hot_spare");
         let manager_id = self.s.manager_id();
         let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
 
@@ -1118,6 +1221,7 @@ impl Redfish for Bmc {
 
 impl Bmc {
     pub fn new(s: RedfishStandard) -> Result<Bmc, RedfishError> {
+        println!("<kcdPrint> new");
         Ok(Bmc { s })
     }
 
@@ -1126,6 +1230,7 @@ impl Bmc {
         &self,
         boot_interface_mac: Option<&str>,
     ) -> Result<Vec<MachineSetupDiff>, RedfishError> {
+        println!("<kcdPrint> diff_bios_bmc_attr");
         let mut diffs = vec![];
 
         let bios = self.s.bios_attributes().await?;
@@ -1268,6 +1373,7 @@ impl Bmc {
     }
 
     async fn perform_ac_power_cycle(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> perform_ac_power_cycle");
         self.clear_pending().await?;
 
         // Set PowerCycleRequest in BIOS settings
@@ -1314,6 +1420,7 @@ impl Bmc {
 
     // No changes can be applied if there are pending jobs
     async fn delete_job_queue(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> delete_job_queue");
         // The queue can't be cleared if system lockdown is enabled
         if self.is_lockdown().await? {
             return Err(RedfishError::Lockdown);
@@ -1330,6 +1437,7 @@ impl Bmc {
 
     // is_lockdown checks if system lockdown is enabled.
     async fn is_lockdown(&self) -> Result<bool, RedfishError> {
+        println!("<kcdPrint> is_lockdown");
         let (attrs, url) = self.manager_attributes().await?;
         let system_lockdown = jsonmap::get_str(&attrs, "Lockdown.1.SystemLockdown", &url)?;
 
@@ -1342,6 +1450,7 @@ impl Bmc {
         entry: dell::BootDevices,
         once: bool,
     ) -> Result<(), RedfishError> {
+        println!("<kcdPrint> set_boot_first");
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset,
         };
@@ -1370,6 +1479,7 @@ impl Bmc {
     }
 
     async fn set_idrac_lockdown(&self, enabled: EnabledDisabled) -> Result<(), RedfishError> {
+        println!("<kcdPrint> set_idrac_lockdown");
         let manager_id: &str = self.s.manager_id();
         let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
 
@@ -1387,6 +1497,7 @@ impl Bmc {
     }
 
     async fn enable_bmc_lockdown(&self, entry: dell::BootDevices) -> Result<(), RedfishError> {
+        println!("<kcdPrint> enable_bmc_lockdown");
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset,
         };
@@ -1432,6 +1543,7 @@ impl Bmc {
     }
 
     async fn disable_bios_lockdown(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> disable_bios_lockdown");
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
         };
@@ -1465,6 +1577,7 @@ impl Bmc {
     }
 
     async fn disable_bmc_lockdown(&self, entry: dell::BootDevices) -> Result<(), RedfishError> {
+        println!("<kcdPrint> disable_bmc_lockdown");
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::Immediate, // bmc settings don't require reboot
         };
@@ -1491,6 +1604,7 @@ impl Bmc {
     }
 
     async fn setup_bmc_remote_access(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> setup_bmc_remote_access");
         // Try the regular Attributes path first (iDRAC 9 and earlier)
         match self.setup_bmc_remote_access_standard().await {
             Ok(()) => return Ok(()),
@@ -1509,6 +1623,7 @@ impl Bmc {
 
     /// Setup BMC remote access via standard Attributes path (iDRAC 9 and earlier).
     async fn setup_bmc_remote_access_standard(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> setup_bmc_remote_access_standard");
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::Immediate,
         };
@@ -1540,6 +1655,7 @@ impl Bmc {
 
     /// Setup BMC remote access via OEM DellAttributes path (iDRAC 10).
     async fn setup_bmc_remote_access_oem(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> setup_bmc_remote_access_oem");
         let manager_id = self.s.manager_id();
         let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
 
@@ -1557,6 +1673,7 @@ impl Bmc {
     }
 
     async fn bmc_remote_access_status(&self) -> Result<Status, RedfishError> {
+        println!("<kcdPrint> bmc_remote_access_status");
         let (attrs, _) = self.manager_attributes().await?;
         let expected = vec![
             // "any" means any value counts as correctly disabled
@@ -1597,6 +1714,7 @@ impl Bmc {
     }
 
     async fn bios_serial_console_status(&self) -> Result<Status, RedfishError> {
+        println!("<kcdPrint> bios_serial_console_status");
         let mut message = String::new();
 
         // Start with true, then check every value to see whether it means things are not setup
@@ -1722,6 +1840,7 @@ impl Bmc {
 
     // dell stores the sel as part of the manager
     async fn get_system_event_log(&self) -> Result<Vec<LogEntry>, RedfishError> {
+        println!("<kcdPrint> get_system_event_log");
         let manager_id = self.s.manager_id();
         let url = format!("Managers/{manager_id}/LogServices/Sel/Entries");
         let (_status_code, log_entry_collection): (_, LogEntryCollection) =
@@ -1735,6 +1854,7 @@ impl Bmc {
     async fn manager_attributes(
         &self,
     ) -> Result<(serde_json::Map<String, serde_json::Value>, String), RedfishError> {
+        println!("<kcdPrint> manager_attributes");
         let manager_id = self.s.manager_id();
         let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
         let (_status_code, mut body): (_, HashMap<String, serde_json::Value>) =
@@ -1745,6 +1865,7 @@ impl Bmc {
 
     /// Extra Dell-specific attributes we need to set that are not BIOS attributes
     async fn machine_setup_oem(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> machine_setup_oem");
         let manager_id = self.s.manager_id();
         let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
 
@@ -1767,6 +1888,7 @@ impl Bmc {
     }
 
     async fn manager_dell_oem_attributes(&self) -> Result<serde_json::Value, RedfishError> {
+        println!("<kcdPrint> manager_dell_oem_attributes");
         let manager_id = self.s.manager_id();
         let url = format!("Managers/{manager_id}/Oem/Dell/DellAttributes/{manager_id}");
         let (_status_code, mut body): (_, HashMap<String, serde_json::Value>) =
@@ -1781,6 +1903,7 @@ impl Bmc {
     // TPM is enabled by default so we never call this.
     #[allow(dead_code)]
     async fn enable_tpm(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> enable_tpm");
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
         };
@@ -1804,6 +1927,7 @@ impl Bmc {
     // Lenovo does not support disabling TPM2.0
     #[allow(dead_code)]
     async fn disable_tpm(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> disable_tpm");
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
         };
@@ -1824,6 +1948,7 @@ impl Bmc {
     }
 
     pub async fn create_bios_config_job(&self) -> Result<String, RedfishError> {
+        println!("<kcdPrint> create_bios_config_job");
         let url = "Managers/iDRAC.Embedded.1/Oem/Dell/Jobs";
 
         let mut arg = HashMap::new();
@@ -1842,6 +1967,7 @@ impl Bmc {
         &self,
         nic_slot: &str,
     ) -> Result<dell::MachineBiosAttrs, RedfishError> {
+        println!("<kcdPrint> machine_setup_attrs");
         let curr_bios_attributes = self.s.bios_attributes().await?;
 
         // RedirAfterBoot: Not available in iDRAC 10
@@ -1911,6 +2037,7 @@ impl Bmc {
         &self,
         current_uefi_password: &str,
     ) -> Result<String, RedfishError> {
+        println!("<kcdPrint> clear_uefi_password_via_import");
         let system_configuration = SystemConfiguration {
             shutdown_type: "Forced".to_string(),
             share_parameters: ShareParameters {
@@ -1929,6 +2056,7 @@ impl Bmc {
         url: &str,
         resp_headers: HeaderMap,
     ) -> Result<String, RedfishError> {
+        println!("<kcdPrint> parse_job_id_from_response_headers");
         let key = "location";
         Ok(resp_headers
             .get(key)
@@ -1957,6 +2085,7 @@ impl Bmc {
         &self,
         system_configuration: SystemConfiguration,
     ) -> Result<String, RedfishError> {
+        println!("<kcdPrint> import_system_configuration");
         let url = "Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.ImportSystemConfiguration";
         let (_status_code, _resp_body, resp_headers): (
             _,
@@ -1985,6 +2114,7 @@ impl Bmc {
         &self,
         boot_interface_mac_address: &str,
     ) -> Result<NetworkDeviceFunction, RedfishError> {
+        println!("<kcdPrint> get_dpu_nw_device_function");
         let chassis = self.get_chassis(self.s.system_id()).await?;
         let na_id = match chassis.network_adapters {
             Some(id) => id,
@@ -2044,6 +2174,7 @@ impl Bmc {
         &self,
         mac_address: &str,
     ) -> Result<serde_json::Map<String, Value>, RedfishError> {
+        println!("<kcdPrint> get_dell_nic_info");
         let nw_device_function = self.get_dpu_nw_device_function(mac_address).await?;
 
         let oem = nw_device_function
@@ -2074,6 +2205,7 @@ impl Bmc {
 
     // Returns a string like "NIC.Slot.5-1"
     async fn dpu_nic_slot(&self, mac_address: &str) -> Result<String, RedfishError> {
+        println!("<kcdPrint> dpu_nic_slot");
         let dell_nic_info = self.get_dell_nic_info(mac_address).await?;
 
         let nic_slot = dell_nic_info
@@ -2088,6 +2220,7 @@ impl Bmc {
     }
 
     async fn get_boss_controller(&self) -> Result<Option<String>, RedfishError> {
+        println!("<kcdPrint> get_boss_controller");
         let url = "Systems/System.Embedded.1/Storage";
         let (_status_code, storage_collection): (_, StorageCollection) =
             self.s.client.get(url).await?;
@@ -2112,6 +2245,7 @@ impl Bmc {
     }
 
     async fn decommission_controller(&self, controller_id: &str) -> Result<String, RedfishError> {
+        println!("<kcdPrint> decommission_controller");
         // wait for the lifecycle controller status to become Ready before decomissioning the boss controller
         // https://github.com/dell/idrac-Redfish-Scripting/issues/323
         self.lifecycle_controller_is_ready().await?;
@@ -2127,6 +2261,7 @@ impl Bmc {
     }
 
     async fn get_storage_drives(&self, controller_id: &str) -> Result<Value, RedfishError> {
+        println!("<kcdPrint> get_storage_drives");
         let url = format!("Systems/System.Embedded.1/Storage/{controller_id}");
         let (_status_code, body): (_, HashMap<String, serde_json::Value>) =
             self.s.client.get(&url).await?;
@@ -2140,6 +2275,7 @@ impl Bmc {
         raid_type: &str,
         drive_info: Value,
     ) -> Result<String, RedfishError> {
+        println!("<kcdPrint> create_storage_volume");
         if volume_name.len() > 15 || volume_name.is_empty() {
             return Err(RedfishError::GenericError {
                 error: format!(
@@ -2165,6 +2301,7 @@ impl Bmc {
     }
 
     async fn get_lifecycle_controller_status(&self) -> Result<String, RedfishError> {
+        println!("<kcdPrint> get_lifecycle_controller_status");
         let manager_id = self.s.manager_id();
         let url = format!(
             "Managers/{manager_id}/Oem/Dell/DellLCService/Actions/DellLCService.GetRemoteServicesAPIStatus"
@@ -2189,6 +2326,7 @@ impl Bmc {
     }
 
     async fn lifecycle_controller_is_ready(&self) -> Result<(), RedfishError> {
+        println!("<kcdPrint> lifecycle_controller_is_ready");
         let lc_status = self.get_lifecycle_controller_status().await?;
         if lc_status == "Ready" {
             return Ok(());
@@ -2204,6 +2342,7 @@ impl Bmc {
         &self,
         boot_interface_mac: &str,
     ) -> Result<String, RedfishError> {
+        println!("<kcdPrint> get_expected_dpu_boot_option_name");
         let dell_nic_info = self.get_dell_nic_info(boot_interface_mac).await?;
 
         let device_description = dell_nic_info
@@ -2218,6 +2357,7 @@ impl Bmc {
     }
 
     async fn get_boot_order(&self) -> Result<Vec<BootOption>, RedfishError> {
+        println!("<kcdPrint> get_boot_order");
         let boot_options = self.get_boot_options().await?;
         let mut boot_order: Vec<BootOption> = Vec::new();
         for boot_option in boot_options.members.iter() {
@@ -2236,6 +2376,7 @@ impl Bmc {
         &self,
         boot_interface_mac: &str,
     ) -> Result<(Option<String>, Option<String>), RedfishError> {
+        println!("<kcdPrint> get_expected_and_actual_first_boot_option");
         let expected_first_boot_option = Some(
             self.get_expected_dpu_boot_option_name(boot_interface_mac)
                 .await?,
@@ -2263,6 +2404,7 @@ struct Empty {}
 
 impl UpdateParameters {
     pub fn new(reboot_immediate: bool) -> UpdateParameters {
+        println!("<kcdPrint> UpdateParameters::new");
         let apply_time = match reboot_immediate {
             true => "Immediate",
             false => "OnReset",
