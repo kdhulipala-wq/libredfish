@@ -224,7 +224,7 @@ impl Redfish for Bmc {
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
         selected_profile: BiosProfileType,
-    ) -> Result<(), RedfishError> {
+    ) -> Result<Option<String>, RedfishError> {
         self.setup_serial_console().await?;
         self.clear_tpm().await?;
         self.boot_first(Boot::Pxe).await?;
@@ -246,7 +246,7 @@ impl Redfish for Bmc {
             }
         }
 
-        Ok(())
+        Ok(None)
     }
 
     async fn machine_setup_status(

@@ -261,9 +261,10 @@ impl Redfish for Bmc {
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
         selected_profile: BiosProfileType,
-    ) -> Result<(), RedfishError> {
-        println!("<kcdPrint> machine_setup");
+    ) -> Result<Option<String>, RedfishError> {
+        println!("<kcdTaskIDs> machine_setup entry");
         self.delete_job_queue().await?;
+        println!("<kcdTaskIDs> machine_setup job queue deleted");
 
         let apply_time = dell::SetSettingsApplyTime {
             apply_time: dell::RedfishSettingsApplyTime::OnReset, // requires reboot to apply
@@ -271,14 +272,19 @@ impl Redfish for Bmc {
 
         let (nic_slot, has_dpu) = match boot_interface_mac {
             Some(mac) => {
+                println!("<kcdTaskIDs> machine_setup resolving nic_slot for mac {}", mac);
                 let slot: String = self.dpu_nic_slot(mac).await?;
                 (slot, true)
             }
             // Zero-DPU case
-            None => ("".to_string(), false),
+            None => {
+                println!("<kcdTaskIDs> machine_setup zero-DPU case");
+                ("".to_string(), false)
+            }
         };
 
         // dell idrac requires applying all bios settings at once.
+        println!("<kcdTaskIDs> machine_setup fetching machine_setup_attrs");
         let machine_settings = self.machine_setup_attrs(&nic_slot).await?;
         let set_machine_attrs = dell::SetBiosAttrs {
             redfish_settings_apply_time: apply_time,
@@ -310,19 +316,32 @@ impl Redfish for Bmc {
         }
 
         let url = format!("Systems/{}/Bios/Settings/", self.s.system_id());
-        match self.s.client.patch(&url, set_machine_attrs).await? {
-            (_, Some(headers)) => self.parse_job_id_from_response_headers(&url, headers).await,
-            (_, None) => Err(RedfishError::NoHeader),
-        }?;
+        println!("<kcdTaskIDs> machine_setup PATCHing BIOS Settings url={}", url);
+        let bios_job_id = match self.s.client.patch(&url, set_machine_attrs).await? {
+            (_, Some(headers)) => {
+                let jid = self.parse_job_id_from_response_headers(&url, headers).await?;
+                println!("<kcdTaskIDs> machine_setup BIOS PATCH returned task/job id={}", jid);
+                Some(jid)
+            }
+            (_, None) => {
+                println!("<kcdTaskIDs> machine_setup BIOS PATCH returned no Location header");
+                return Err(RedfishError::NoHeader);
+            }
+        };
 
+        println!("<kcdTaskIDs> machine_setup running machine_setup_oem");
         self.machine_setup_oem().await?;
+        println!("<kcdTaskIDs> machine_setup running setup_bmc_remote_access");
         self.setup_bmc_remote_access().await?;
 
         if has_dpu {
-            Ok(())
+            println!(
+                "<kcdTaskIDs> machine_setup success, returning bios_job_id={:?}",
+                bios_job_id
+            );
+            Ok(bios_job_id)
         } else {
-            // Usually a missing DPU is an error, but for zero-dpu it isn't
-            // Tell the caller and let them decide
+            println!("<kcdTaskIDs> machine_setup NoDpu (zero-DPU)");
             Err(RedfishError::NoDpu)
         }
     }
@@ -877,7 +896,7 @@ impl Redfish for Bmc {
     }
 
     async fn get_job_state(&self, job_id: &str) -> Result<JobState, RedfishError> {
-        println!("<kcdPrint> get_job_state");
+        println!("<kcdTaskIDs> get_job_state job_id={}", job_id);
         let url = format!("Managers/iDRAC.Embedded.1/Oem/Dell/Jobs/{}", job_id);
         let (_status_code, body): (_, HashMap<String, serde_json::Value>) =
             self.s.client.get(&url).await?;
@@ -917,6 +936,10 @@ impl Redfish for Bmc {
             state => state,
         };
 
+        println!(
+            "<kcdTaskIDs> get_job_state job_id={} returning state={:?}",
+            job_id, job_state
+        );
         Ok(job_state)
     }
 
@@ -2056,9 +2079,9 @@ impl Bmc {
         url: &str,
         resp_headers: HeaderMap,
     ) -> Result<String, RedfishError> {
-        println!("<kcdPrint> parse_job_id_from_response_headers");
+        println!("<kcdTaskIDs> parse_job_id_from_response_headers url={}", url);
         let key = "location";
-        Ok(resp_headers
+        let jid = resp_headers
             .get(key)
             .ok_or_else(|| RedfishError::MissingKey {
                 key: key.to_string(),
@@ -2077,7 +2100,9 @@ impl Bmc {
                 field: key.to_string(),
                 err: InvalidValueError("unable to parse job_id from location string".to_string()),
             })?
-            .to_string())
+            .to_string();
+        println!("<kcdTaskIDs> parse_job_id_from_response_headers parsed job_id={}", jid);
+        Ok(jid)
     }
 
     /// import_system_configuration returns the job ID for importing this sytem configuration
