@@ -218,8 +218,8 @@ impl Redfish for Bmc {
             HashMap<String, HashMap<BiosProfileType, HashMap<String, serde_json::Value>>>,
         >,
         _selected_profile: BiosProfileType,
-    ) -> Result<(), RedfishError> {
-        self.set_bios_attributes().await
+    ) -> Result<Option<String>, RedfishError> {
+        self.set_bios_attributes().await.map(|_| None)
     }
 
     async fn machine_setup_status(
