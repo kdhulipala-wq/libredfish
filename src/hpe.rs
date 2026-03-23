@@ -256,7 +256,8 @@ impl Redfish for Bmc {
         self.clear_tpm().await?;
         self.set_virt_enable().await?;
         self.set_uefi_nic_boot().await?;
-        self.set_boot_order(BootDevices::Pxe).await.map(|_| None)
+        self.set_boot_order(BootDevices::Pxe).await?;
+        Ok(None)
     }
 
     async fn machine_setup_status(

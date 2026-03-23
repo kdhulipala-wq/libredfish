@@ -252,9 +252,7 @@ impl Redfish for Bmc {
                 (slot, true)
             }
             // Zero-DPU case
-            None => {
-                ("".to_string(), false)
-            }
+            None => ("".to_string(), false),
         };
 
         // dell idrac requires applying all bios settings at once.
@@ -291,7 +289,9 @@ impl Redfish for Bmc {
         let url = format!("Systems/{}/Bios/Settings/", self.s.system_id());
         let bios_job_id = match self.s.client.patch(&url, set_machine_attrs).await? {
             (_, Some(headers)) => {
-                let jid = self.parse_job_id_from_response_headers(&url, headers).await?;
+                let jid = self
+                    .parse_job_id_from_response_headers(&url, headers)
+                    .await?;
                 Some(jid)
             }
             (_, None) => {
@@ -303,12 +303,10 @@ impl Redfish for Bmc {
         self.setup_bmc_remote_access().await?;
 
         if has_dpu {
-            println!(
-                "<kcdTaskIDs> machine_setup success, returning bios_job_id={:?}",
-                bios_job_id
-            );
             Ok(bios_job_id)
         } else {
+            // Usually a missing DPU is an error, but for zero-dpu it isn't
+            // Tell the caller and let them decide
             Err(RedfishError::NoDpu)
         }
     }
@@ -853,10 +851,6 @@ impl Redfish for Bmc {
             state => state,
         };
 
-        println!(
-            "<kcdTaskIDs> get_job_state job_id={} returning state={:?}",
-            job_id, job_state
-        );
         Ok(job_state)
     }
 

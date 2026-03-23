@@ -219,7 +219,8 @@ impl Redfish for Bmc {
         >,
         _selected_profile: BiosProfileType,
     ) -> Result<Option<String>, RedfishError> {
-        self.set_bios_attributes().await.map(|_| None)
+        self.set_bios_attributes().await?;
+        Ok(None)
     }
 
     async fn machine_setup_status(

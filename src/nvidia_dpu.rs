@@ -206,7 +206,8 @@ impl Redfish for Bmc {
         // BF3s that have a BMC that is too old.
         self.set_host_rshim(EnabledDisabled::Disabled).await?;
         self.set_internal_cpu_model(Embedded).await?;
-        self.boot_once(UefiHttp).await.map(|_| None)
+        self.boot_once(UefiHttp).await?;
+        Ok(None)
     }
 
     async fn machine_setup_status(
