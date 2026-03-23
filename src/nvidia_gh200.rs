@@ -191,7 +191,8 @@ impl Redfish for Bmc {
         _selected_profile: BiosProfileType,
     ) -> Result<Option<String>, RedfishError> {
         self.disable_secure_boot().await?;
-        self.boot_once(UefiHttp).await.map(|_| None)
+        self.boot_once(UefiHttp).await?;
+        Ok(None)
     }
 
     async fn machine_setup_status(

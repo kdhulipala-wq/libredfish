@@ -476,7 +476,11 @@ impl Redfish for Bmc {
         attrs.extend(bios_attrs);
         let body = HashMap::from([("Attributes", attrs)]);
         let url = format!("Systems/{}/Bios/Settings", self.s.system_id());
-        self.s.client.patch(&url, body).await.map(|_status_code| None)
+        self.s
+            .client
+            .patch(&url, body)
+            .await
+            .map(|_status_code| None)
     }
 
     async fn machine_setup_status(
