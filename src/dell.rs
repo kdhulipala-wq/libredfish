@@ -287,23 +287,14 @@ impl Redfish for Bmc {
         }
 
         let url = format!("Systems/{}/Bios/Settings/", self.s.system_id());
-        println!(
-            "<kcdLibredfishTaskID> machine_setup PATCH BIOS Settings url={url} (expect Dell BIOS config job id from Location header)"
-        );
         let bios_job_id = match self.s.client.patch(&url, set_machine_attrs).await? {
             (_, Some(headers)) => {
                 let jid = self
                     .parse_job_id_from_response_headers(&url, headers)
                     .await?;
-                println!(
-                    "<kcdLibredfishTaskID> machine_setup got BIOS config job_id={jid} from PATCH response"
-                );
                 Some(jid)
             }
             (_, None) => {
-                println!(
-                    "<kcdLibredfishTaskID> machine_setup PATCH returned no Location header (NoHeader)"
-                );
                 return Err(RedfishError::NoHeader);
             }
         };
@@ -312,15 +303,8 @@ impl Redfish for Bmc {
         self.setup_bmc_remote_access().await?;
 
         if has_dpu {
-            println!(
-                "<kcdLibredfishTaskID> machine_setup returning Ok(job_id={bios_job_id:?}) for DPU host"
-            );
             Ok(bios_job_id)
         } else {
-            println!(
-                "<kcdLibredfishTaskID> machine_setup zero-DPU path returning Err(NoDpu) (caller may treat as Ok)"
-            );
-            // Usually a missing DPU is an error, but for zero-dpu it isn't
             // Tell the caller and let them decide
             Err(RedfishError::NoDpu)
         }
@@ -828,9 +812,6 @@ impl Redfish for Bmc {
 
     async fn get_job_state(&self, job_id: &str) -> Result<JobState, RedfishError> {
         let url = format!("Managers/iDRAC.Embedded.1/Oem/Dell/Jobs/{}", job_id);
-        println!(
-            "<kcdLibredfishTaskID> get_job_state job_id={job_id} GET {url}"
-        );
         let (_status_code, body): (_, HashMap<String, serde_json::Value>) =
             self.s.client.get(&url).await?;
         let job_state_value = jsonmap::get_str(&body, "JobState", &url)?;
@@ -869,9 +850,6 @@ impl Redfish for Bmc {
             state => state,
         };
 
-        println!(
-            "<kcdLibredfishTaskID> get_job_state job_id={job_id} -> JobState={job_state:?}"
-        );
         Ok(job_state)
     }
 
@@ -911,16 +889,10 @@ impl Redfish for Bmc {
 
                 let job_id = match self.s.client.patch(&url, body).await? {
                     (_, Some(headers)) => {
-                        println!(
-                            "<kcdLibredfishTaskID> set_boot_order_dpu_first PATCH {url} (boot order job)"
-                        );
                         self.parse_job_id_from_response_headers(&url, headers).await
                     }
                     (_, None) => Err(RedfishError::NoHeader),
                 }?;
-                println!(
-                    "<kcdLibredfishTaskID> set_boot_order_dpu_first job_id={job_id}"
-                );
                 return Ok(Some(job_id));
             }
         }
@@ -1984,9 +1956,6 @@ impl Bmc {
                 err: InvalidValueError("unable to parse job_id from location string".to_string()),
             })?
             .to_string();
-        println!(
-            "<kcdLibredfishTaskID> parse_job_id_from_response_headers url={url} -> job_id={jid}"
-        );
         Ok(jid)
     }
 
