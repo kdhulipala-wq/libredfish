@@ -97,7 +97,7 @@ impl RedfishClientPoolBuilder {
 }
 
 /// The endpoint that the redfish client connects to
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)] // WARN: Do not derive Debug: Endpoint may contain credentials and must not be logged accidentally.
 pub struct Endpoint {
     /// Hostname or IP address of BMC
     pub host: String,
@@ -149,14 +149,50 @@ impl RedfishClientPool {
             .await
     }
 
-    /// Creates a Redfish BMC client for a certain endpoint and adds custom headers to subsequent requests.
+    /// Creates a Redfish BMC client for a certain endpoint,
+    /// and adds custom headers to subsequent requests.
     ///
-    /// Creating the client will immediately start a HTTP requests
-    /// to set system_id, manager_id and vendor type.
-    /// `custom_headers` will be added to any headers used by vendor specific implementations or the http client.
+    /// Creating the client will immediately start HTTP requests
+    /// to set system_id, manager_id, and vendor type (the vendor
+    /// is auto-detected from the service root.
+    ///
+    /// `custom_headers` will be added to any headers used by vendor
+    /// specific implementations or the http client.
     pub async fn create_client_with_custom_headers(
         &self,
         endpoint: Endpoint,
+        custom_headers: Vec<(HeaderName, String)>,
+    ) -> Result<Box<dyn crate::Redfish>, RedfishError> {
+        self.create_client_impl(endpoint, None, custom_headers)
+            .await
+    }
+
+    /// Creates a Redfish BMC client for a certain endpoint using
+    /// the provided vendor instead of auto-detecting from the service
+    /// root. This is needed for BMCs (e.g. Lite-On power shelves) whose
+    /// service root does not expose vendor information, where we need
+    /// a client that uses vendor-specific logic.
+    pub async fn create_client_with_vendor(
+        &self,
+        endpoint: Endpoint,
+        vendor: RedfishVendor,
+        custom_headers: Vec<(HeaderName, String)>,
+    ) -> Result<Box<dyn crate::Redfish>, RedfishError> {
+        self.create_client_impl(endpoint, Some(vendor), custom_headers)
+            .await
+    }
+
+    // Creates a complete "client" that takes the endpoint, an optional
+    // vendor (which falls back to self-detection using the service root),
+    // and an optional set of custom headers.
+    //
+    // If there's ever a need to expose this as pub, it's entirely
+    // reasonable to do so (and rename it to something descriptive like
+    // create_complete_client).
+    async fn create_client_impl(
+        &self,
+        endpoint: Endpoint,
+        vendor: Option<RedfishVendor>,
         custom_headers: Vec<(HeaderName, String)>,
     ) -> Result<Box<dyn crate::Redfish>, RedfishError> {
         let client = RedfishHttpClient::new(self.http_client.clone(), endpoint, custom_headers);
@@ -172,22 +208,28 @@ impl RedfishClientPool {
         })?;
         let chassis = s.get_chassis_all().await?;
 
-        s.set_system_id(system_id)?;
         // call set_system_id always before calling set_vendor
+        s.set_system_id(system_id)?;
         s.set_manager_id(manager_id)?;
         s.set_service_root(service_root.clone())?;
 
-        let Some(mut vendor) = service_root.vendor() else {
-            return Err(RedfishError::MissingVendor);
+        let vendor = match vendor {
+            Some(v) => v,
+            None => service_root.vendor().ok_or(RedfishError::MissingVendor)?,
         };
-        if vendor == RedfishVendor::P3809 {
+
+        // P3809 is a placeholder — always resolve it based on chassis
+        // contents, whether it was auto-detected or explicitly provided.
+        let vendor = if vendor == RedfishVendor::P3809 {
             if chassis.contains(&"MGX_NVSwitch_0".to_string()) {
-                vendor = RedfishVendor::NvidiaGBSwitch;
+                RedfishVendor::NvidiaGBSwitch
             } else {
-                vendor = RedfishVendor::NvidiaGH200;
+                RedfishVendor::NvidiaGH200
             }
-        }
-        // returns the vendor specific object
+        } else {
+            vendor
+        };
+
         s.set_vendor(vendor).await
     }
 
